@@ -17,13 +17,14 @@ include(${CSBUILD_USE_FILE})
 
 function(add_dotnet_library _TARGET_NAME)
   cmake_parse_arguments(_add_dotnet_library
+    "COPY_INCLUDES"
     ""
-    ""
-    "SOURCES;INCLUDE_DLLS;INCLUDE_NUPKGS;INCLUDE_REFERENCES"
+    "SOURCES;INCLUDE_DLLS;INCLUDE_NUPKGS;INCLUDE_REFERENCES;INCLUDE_PROJECTS"
     ${ARGN}
   )
 
   csharp_add_project(${_TARGET_NAME}
+	${_add_dotnet_executable_COPY_INCLUDES}
     SOURCES
     ${_add_dotnet_library_SOURCES}
     ${_add_dotnet_library_UNPARSED_ARGUMENTS}
@@ -33,19 +34,22 @@ function(add_dotnet_library _TARGET_NAME)
     ${_add_dotnet_library_INCLUDE_NUPKGS}
     INCLUDE_REFERENCES
     ${_add_dotnet_library_INCLUDE_REFERENCES}
+	INCLUDE_PROJECTS
+	${_add_dotnet_library_INCLUDE_PROJECTS}
   )
 endfunction()
 
 function(add_dotnet_executable _TARGET_NAME)
   cmake_parse_arguments(_add_dotnet_executable
+    "COPY_INCLUDES"
     ""
-    ""
-    "SOURCES;INCLUDE_DLLS;INCLUDE_NUPKGS;INCLUDE_REFERENCES"
+    "SOURCES;INCLUDE_DLLS;INCLUDE_NUPKGS;INCLUDE_REFERENCES;INCLUDE_PROJECTS"
     ${ARGN}
   )
 
   csharp_add_project(${_TARGET_NAME}
     EXECUTABLE
+	${_add_dotnet_executable_COPY_INCLUDES}
     SOURCES
     ${_add_dotnet_executable_SOURCES}
     ${_add_dotnet_executable_UNPARSED_ARGUMENTS}
@@ -55,6 +59,8 @@ function(add_dotnet_executable _TARGET_NAME)
     ${_add_dotnet_executable_INCLUDE_NUPKGS}
     INCLUDE_REFERENCES
     ${_add_dotnet_executable_INCLUDE_REFERENCES}
+	INCLUDE_PROJECTS
+	${_add_dotnet_library_INCLUDE_PROJECTS}
   )
 endfunction()
 

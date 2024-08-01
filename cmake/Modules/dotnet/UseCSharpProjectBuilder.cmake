@@ -13,9 +13,9 @@ function(csharp_add_project name)
     set(CSBUILD_PROJECT_DIR "")
     file(MAKE_DIRECTORY ${CURRENT_TARGET_BINARY_DIR}/${name})
     cmake_parse_arguments(_csharp_add_project
-        "EXECUTABLE"
+        "EXECUTABLE;COPY_INCLUDES"
         ""
-        "SOURCES;INCLUDE_DLLS;INCLUDE_NUPKGS;INCLUDE_REFERENCES"
+        "SOURCES;INCLUDE_DLLS;INCLUDE_NUPKGS;INCLUDE_REFERENCES;INCLUDE_PROJECTS"
         ${ARGN}
     )
 
@@ -27,25 +27,50 @@ function(csharp_add_project name)
 
     foreach(it ${_csharp_add_project_INCLUDE_DLLS})
         file(TO_NATIVE_PATH ${it} nit)
-        list(APPEND refs "<Reference;Include=\\\"${nit}\\\";/>")
+        list(APPEND refs "<Reference;Include=\\\"${nit}\\\";>")
+		if(NOT _csharp_add_project_COPY_INCLUDES)
+		    list(APPEND refs "<Private>False</Private>")
+		endif()
+		list(APPEND refs "</Reference>")
     endforeach()
 
     foreach(it ${_csharp_add_project_INCLUDE_NUPKGS})
         file(TO_NATIVE_PATH ${it} nit)
         list(APPEND pkgs "<package;id=\\\"${nit}\\\";version=;/>")
+		if(NOT _csharp_add_project_COPY_INCLUDES)
+		    message(WARNING "legacy nuget package id=\\\"${nit}\\\" may not support excluding dependencies assembly from output directory.")
+		endif()
     endforeach()
 
     foreach(it ${_csharp_add_project_INCLUDE_REFERENCES})
         string(REPLACE "=" ";" PACKAGE_ID "${it}")
         list(GET PACKAGE_ID 0 PACKAGE_NAME)
         list(GET PACKAGE_ID 1 PACKAGE_VERSION)
-        list(APPEND packages "<PackageReference;Include=\\\"${PACKAGE_NAME}\\\";Version=\\\"${PACKAGE_VERSION}\\\";/>")
+		
+        list(APPEND packages "<PackageReference;Include=\\\"${PACKAGE_NAME}\\\";Version=\\\"${PACKAGE_VERSION}\\\";>")
+		if(NOT _csharp_add_project_COPY_INCLUDES)
+		    list(APPEND packages "<IncludeAssets>compile</IncludeAssets>")
+			list(APPEND packages "<PrivateAssets>all</PrivateAssets>")
+		endif()
+		list(APPEND packages "</PackageReference>")
+		
         list(APPEND legacy_packages "<package;id=\\\"${PACKAGE_NAME}\\\";version=\\\"${PACKAGE_VERSION}\\\";/>")
+        if(NOT _csharp_add_project_COPY_INCLUDES)
+		    message(WARNING "legacy package id=\\\"${PACKAGE_NAME}\\\";version=\\\"${PACKAGE_VERSION}\\\" may not support excluding dependencies assembly from output directory.")
+		endif()
+		
         file(TO_NATIVE_PATH "${CURRENT_TARGET_BINARY_DIR}/${name}/${PACKAGE_NAME}.${PACKAGE_VERSION}/lib/**/*.dll" hint_path)
-        list(APPEND refs "<Reference;Include=\\\"${hint_path}\\\";></Reference>")
+        list(APPEND refs "<Reference;Include=\\\"${hint_path}\\\";>")
+		if(NOT _csharp_add_project_COPY_INCLUDES)
+		    list(APPEND refs "<Private>False</Private>")
+		endif()
+		list(APPEND refs "</Reference>")
 
         file(TO_NATIVE_PATH "${CURRENT_TARGET_BINARY_DIR}/${name}/${PACKAGE_NAME}.${PACKAGE_VERSION}/build/${PACKAGE_NAME}.targets" target_path)
         list(APPEND imports "<Import;Project=\\\"${target_path}\\\";Condition=\\\"Exists('${target_path}')\\\";/>")
+		if(NOT _csharp_add_project_COPY_INCLUDES)
+		    message(WARNING ".targets Import Project=\\\"${target_path}\\\" may not support excluding dependencies assembly from output directory.")
+		endif()
     endforeach()
 
     foreach(it ${_csharp_sources})
@@ -172,6 +197,7 @@ function(csharp_add_project name)
         COMMAND ${RESTORE_CMD}
 
         COMMAND ${CSBUILD_EXECUTABLE} ${CSBUILD_RESTORE_FLAGS} ${CSBUILD_${name}_CSPROJ}
+		# COMMAND ${CSBUILD_EXECUTABLE} ${CSBUILD_CLEAN_FLAGS} ${CSBUILD_${name}_CSPROJ}
         COMMAND ${CSBUILD_EXECUTABLE} ${CSBUILD_BUILD_FLAGS} ${CSBUILD_${name}_CSPROJ}
         WORKING_DIRECTORY ${CURRENT_TARGET_BINARY_DIR}/${name}
         COMMENT "${RESTORE_CMD};${CSBUILD_EXECUTABLE} ${CSBUILD_RESTORE_FLAGS} ${CSBUILD_${name}_CSPROJ}; ${CSBUILD_EXECUTABLE} ${CSBUILD_BUILD_FLAGS} ${CSBUILD_${name}_CSPROJ} -> ${CURRENT_TARGET_BINARY_DIR}/${name}"
